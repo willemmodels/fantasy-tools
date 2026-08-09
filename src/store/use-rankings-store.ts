@@ -10,6 +10,7 @@ interface RankingsState {
   notes: Record<string, string>;
   drafted: Record<string, boolean>;
   scoringFormat: ScoringFormat;
+  bigBallerMode: boolean;
   searchQuery: string;
   positionFilters: string[];
   selectedPlayerId: string | null;
@@ -23,6 +24,7 @@ interface RankingsState {
   setNote: (playerId: string, note: string) => void;
   toggleDrafted: (playerId: string) => void;
   setScoringFormat: (format: ScoringFormat) => void;
+  toggleBigBallerMode: () => void;
   setSearchQuery: (query: string) => void;
   togglePositionFilter: (position: string) => void;
   setSelectedPlayerId: (playerId: string | null) => void;
@@ -44,6 +46,7 @@ export const useRankingsStore = create<RankingsState>()(
       notes: {},
       drafted: {},
       scoringFormat: "PPR",
+      bigBallerMode: false,
       searchQuery: "",
       positionFilters: [],
       selectedPlayerId: null,
@@ -113,6 +116,7 @@ export const useRankingsStore = create<RankingsState>()(
       },
 
       setScoringFormat: (format) => set({ scoringFormat: format }),
+      toggleBigBallerMode: () => set({ bigBallerMode: !get().bigBallerMode }),
       setSearchQuery: (query) => set({ searchQuery: query }),
 
       togglePositionFilter: (position) => {
@@ -135,6 +139,7 @@ export const useRankingsStore = create<RankingsState>()(
         notes: state.notes,
         drafted: state.drafted,
         scoringFormat: state.scoringFormat,
+        bigBallerMode: state.bigBallerMode,
       }),
     }
   )

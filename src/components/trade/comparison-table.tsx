@@ -91,7 +91,7 @@ export function ComparisonTable() {
       )}
 
       {conflictWeeks.length > 0 && (
-        <div className="rounded-[8px] border border-[var(--status-danger)] bg-red-50 px-3 py-2 text-[13px] text-[var(--status-danger)]">
+        <div className="rounded-[8px] border border-[var(--status-danger)] bg-red-50 px-3 py-2 text-[13px] text-[var(--status-danger)] dark:bg-red-950/40">
           Bye week collision on week{conflictWeeks.length > 1 ? "s" : ""} {conflictWeeks.join(", ")}
         </div>
       )}

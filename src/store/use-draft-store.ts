@@ -3,16 +3,6 @@ import { persist } from "zustand/middleware";
 import { DraftPick, DraftRoomConfig } from "@/lib/types";
 import { roundForPick, teamIndexForPick } from "@/lib/draft-logic";
 
-export const BIG_BALLER_STARTUP_ROSTER = {
-  QB: 2,
-  RB: 4,
-  WR: 5,
-  TE: 2,
-  FLEX: 2,
-  K: 2,
-  BENCH: 6,
-};
-
 interface DraftState {
   config: DraftRoomConfig | null;
   teamNames: string[];

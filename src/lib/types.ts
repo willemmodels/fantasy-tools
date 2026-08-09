@@ -60,6 +60,19 @@ export interface RosterConfig {
   BENCH: number;
 }
 
+export const BIG_BALLER_STARTUP_ROSTER: RosterConfig = {
+  QB: 2,
+  RB: 4,
+  WR: 5,
+  TE: 2,
+  FLEX: 2,
+  K: 2,
+  BENCH: 20,
+};
+
+export const BIG_BALLER_BUDGET = 500;
+export const BIG_BALLER_TEAMS = 4;
+
 export interface DraftPick {
   overallPick: number;
   round: number;

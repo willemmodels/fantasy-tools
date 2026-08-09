@@ -19,8 +19,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDraftStore, BIG_BALLER_STARTUP_ROSTER } from "@/store/use-draft-store";
-import { DraftType, RosterConfig, ScoringFormat } from "@/lib/types";
+import { useDraftStore } from "@/store/use-draft-store";
+import {
+  BIG_BALLER_BUDGET,
+  BIG_BALLER_STARTUP_ROSTER,
+  BIG_BALLER_TEAMS,
+  DraftType,
+  RosterConfig,
+  ScoringFormat,
+} from "@/lib/types";
 
 const DEFAULT_ROSTER: RosterConfig = {
   QB: 1,
@@ -45,8 +52,9 @@ export function RoomConfigModal() {
 
   function applyBigBallerPreset() {
     setDraftType("AUCTION");
-    setBudget(500);
+    setBudget(BIG_BALLER_BUDGET);
     setRoster(BIG_BALLER_STARTUP_ROSTER);
+    setTeams(BIG_BALLER_TEAMS);
   }
 
   function handleStart() {

@@ -23,17 +23,20 @@ import { PositionPill } from "@/components/shared/position-pill";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useRankingsStore } from "@/store/use-rankings-store";
 import { displayedHistoricalPoints, displayedProjection } from "@/lib/scoring";
+import { computeAuctionValues } from "@/lib/valuation";
 import { cn } from "@/lib/utils";
-import { Player } from "@/lib/types";
+import { BIG_BALLER_BUDGET, BIG_BALLER_STARTUP_ROSTER, BIG_BALLER_TEAMS, Player } from "@/lib/types";
 
 function SortableRow({
   player,
   rank,
   isFiltered,
+  bigBallerValue,
 }: {
   player: Player;
   rank: number;
   isFiltered: boolean;
+  bigBallerValue?: number;
 }) {
   const scoringFormat = useRankingsStore((s) => s.scoringFormat);
   const setSelectedPlayerId = useRankingsStore((s) => s.setSelectedPlayerId);
@@ -81,6 +84,9 @@ function SortableRow({
       <TableCell className="tabular-nums text-[13px] text-[var(--muted-foreground)]">
         {player.adp}
       </TableCell>
+      {bigBallerValue !== undefined && (
+        <TableCell className="tabular-nums font-medium">${bigBallerValue}</TableCell>
+      )}
     </TableRow>
   );
 }
@@ -93,9 +99,24 @@ export function RankingsTable() {
   const searchQuery = useRankingsStore((s) => s.searchQuery);
   const positionFilters = useRankingsStore((s) => s.positionFilters);
   const dragReorder = useRankingsStore((s) => s.dragReorder);
+  const bigBallerMode = useRankingsStore((s) => s.bigBallerMode);
+  const drafted = useRankingsStore((s) => s.drafted);
 
   const playerById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
   const tierById = useMemo(() => new Map(tiers.map((t) => [t.id, t.label])), [tiers]);
+
+  // Preview $ values under the Big Baller Startup format (2QB/5WR, 12 teams,
+  // $500 budget) without needing a configured draft room — reuses the same
+  // VORP engine the auction board uses, over the currently-undrafted pool.
+  const bigBallerValues = useMemo(() => {
+    if (!bigBallerMode) return null;
+    const available = players.filter((p) => !drafted[p.id]);
+    return computeAuctionValues(available, {
+      budgetPerTeam: BIG_BALLER_BUDGET,
+      teams: BIG_BALLER_TEAMS,
+      roster: BIG_BALLER_STARTUP_ROSTER,
+    });
+  }, [bigBallerMode, players, drafted]);
 
   const isFiltered = searchQuery.trim().length > 0 || positionFilters.length > 0;
 
@@ -152,6 +173,7 @@ export function RankingsTable() {
             <TableHead>2025 Pts</TableHead>
             <TableHead>Proj</TableHead>
             <TableHead>ADP</TableHead>
+            {bigBallerMode && <TableHead>Big Baller $</TableHead>}
           </TableRow>
         </TableHeader>
         <SortableContext
@@ -163,12 +185,20 @@ export function RankingsTable() {
               <Fragment key={player.id}>
                 {showTierHeader && tierId && (
                   <TableRow className="bg-[var(--surface-muted)] hover:bg-[var(--surface-muted)]">
-                    <TableCell colSpan={9} className="py-1.5 text-[12px] font-medium text-[var(--muted-foreground)]">
+                    <TableCell
+                      colSpan={bigBallerMode ? 10 : 9}
+                      className="py-1.5 text-[12px] font-medium text-[var(--muted-foreground)]"
+                    >
                       {tierById.get(tierId) ?? "Tier"}
                     </TableCell>
                   </TableRow>
                 )}
-                <SortableRow player={player} rank={rank} isFiltered={isFiltered} />
+                <SortableRow
+                  player={player}
+                  rank={rank}
+                  isFiltered={isFiltered}
+                  bigBallerValue={bigBallerValues?.get(player.id)}
+                />
               </Fragment>
             ))}
           </TableBody>

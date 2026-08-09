@@ -21,6 +21,8 @@ export function ControlsBar() {
   const togglePositionFilter = useRankingsStore((s) => s.togglePositionFilter);
   const scoringFormat = useRankingsStore((s) => s.scoringFormat);
   const setScoringFormat = useRankingsStore((s) => s.setScoringFormat);
+  const bigBallerMode = useRankingsStore((s) => s.bigBallerMode);
+  const toggleBigBallerMode = useRankingsStore((s) => s.toggleBigBallerMode);
   const addTier = useRankingsStore((s) => s.addTier);
 
   return (
@@ -65,6 +67,19 @@ export function ControlsBar() {
           <SelectItem value="STD">Standard</SelectItem>
         </SelectContent>
       </Select>
+
+      <button
+        onClick={toggleBigBallerMode}
+        title="Show auction dollar values under the Big Baller Startup format (2QB/5WR, 4 teams, $500 budget)"
+        className={cn(
+          "rounded-[8px] border px-3 py-1.5 text-sm transition-colors",
+          bigBallerMode
+            ? "border-[var(--foreground)] bg-[var(--surface-muted)] font-medium"
+            : "border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+        )}
+      >
+        Big Baller
+      </button>
 
       <Button
         variant="outline"

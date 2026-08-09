@@ -29,7 +29,7 @@ export function MyTeamSidebar() {
   return (
     <div className="space-y-3">
       {conflicts.size > 0 && (
-        <div className="rounded-[8px] border border-[var(--status-danger)] bg-red-50 p-2 text-[12px] text-[var(--status-danger)]">
+        <div className="rounded-[8px] border border-[var(--status-danger)] bg-red-50 p-2 text-[12px] text-[var(--status-danger)] dark:bg-red-950/40">
           {Array.from(conflicts.entries()).map(([week, ps]) => (
             <p key={week}>
               {ps.length} players share bye week {week}
