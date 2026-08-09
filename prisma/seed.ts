@@ -1,12 +1,16 @@
 // Imports real NFL data from nflverse (https://github.com/nflverse/nflverse-data,
 // public/CC0 community dataset) at seed time: active 2026 rosters, real 2025 season
 // stats, the real 2026 schedule (bye weeks + posted sportsbook lines), and real
-// contract data. There is no free source for 2026 fantasy projections or
-// per-player prop odds, so `proj2026`/`sos`/`upside`/`bustRisk` are this script's
-// own estimates computed from the real inputs above — see the comments below.
+// contract data (best-effort — see loadContracts). Strength-of-schedule/upside/bust
+// come from the user-supplied FantasyPros export (FantasyPros_2026_Draft_ALL_Rankings.csv
+// at the project root) where a player matches by name; there's no free source for
+// 2026 fantasy projections or per-player prop odds, so `proj2026` is this script's
+// own estimate computed from the real inputs above — see the comment at its formula.
 // Run with `npm run db:seed`. No network available? `npm run db:seed:mock` seeds
 // synthetic players instead.
 import "dotenv/config";
+import { readFileSync } from "node:fs";
+import { parse } from "csv-parse/sync";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { fetchCsv, fetchGzipCsv, normalizeTeam, num } from "./nflverse";
@@ -120,6 +124,48 @@ async function loadContracts() {
   return byName;
 }
 
+// "5 out of 5" / "4 out of 5 stars" → 4. Shared parser for FantasyPros' rating columns.
+function starRating(value: string | undefined): number | null {
+  const match = value?.match(/\d+/);
+  return match ? Number(match[0]) : null;
+}
+
+interface FpRating {
+  upside: number | null;
+  bust: number | null;
+  sos: number | null;
+}
+
+// User-supplied FantasyPros export, read from the project root — not fetched,
+// so this is skipped (falls back to the heuristics below) if the file is missing.
+function loadFantasyProsRatings(): Map<string, FpRating> {
+  const byName = new Map<string, FpRating>();
+  let text: string;
+  try {
+    text = readFileSync("FantasyPros_2026_Draft_ALL_Rankings.csv", "utf-8");
+  } catch {
+    console.warn("FantasyPros CSV not found — using heuristic upside/bust/sos for all players.");
+    return byName;
+  }
+  // relax_column_count: the export has a couple of stray short rows (tier dividers)
+  // with fewer fields than the header — skip them instead of throwing.
+  const rows: Record<string, string>[] = parse(text, {
+    columns: true,
+    skip_empty_lines: true,
+    relax_column_count: true,
+  });
+  for (const row of rows) {
+    const name = row["PLAYER NAME"];
+    if (!name) continue;
+    byName.set(normalizeName(name), {
+      upside: starRating(row["UPSIDE "]),
+      bust: starRating(row["BUST "]),
+      sos: starRating(row["SOS SEASON"]),
+    });
+  }
+  return byName;
+}
+
 async function main() {
   console.log("Fetching 2026 rosters, 2025 stats, 2026 schedule, and contracts from nflverse…");
 
@@ -130,6 +176,7 @@ async function main() {
       loadContracts(),
       loadByeWeeksAndImpliedPoints(),
     ]);
+  const fpRatings = loadFantasyProsRatings();
 
   const statsByPlayerId = new Map(statsRows.map((r) => [r.player_id, r]));
 
@@ -171,26 +218,36 @@ async function main() {
     const vegasProj = baseline * offenseFactor;
     const proj2026 = baseline * 0.6 + vegasProj * 0.4;
 
-    // Upside/bust are this project's own 1-5 heuristics from real inputs
-    // (target share, team offense strength, games played, experience) —
-    // there's no free real "upside grade" data source, see file header.
-    const upside = clamp(
-      1 +
-        (targetShare > 0.25 ? 2 : targetShare > 0.15 ? 1 : 0) +
-        (offenseFactor > 1.1 ? 2 : offenseFactor > 1 ? 1 : 0),
-      1,
-      5
-    );
-    const bustRisk = clamp(
-      1 + (age > 29 ? 1 : 0) + (yearsExp === 0 ? 1 : 0) + (gp > 0 && gp < 10 ? 2 : 0),
-      1,
-      5
-    );
-    // No free real defensive-matchup data source was available for this pass —
-    // sos is illustrative only (deterministic from bye week, not schedule difficulty).
-    const sos = clamp(((byeWeekByTeam.get(team) ?? 10) % 10) + 1, 1, 10);
+    // Upside/bust/SoS come from the user-supplied FantasyPros export (real editorial
+    // ratings, already on FantasyPros' own 1-5 scale) when the player is in it; players
+    // outside its ~500-player pool fall back to this project's own heuristic from real
+    // inputs (target share, team offense strength, games played, experience).
+    const fp = fpRatings.get(normalizeName(row.full_name));
+    const upside =
+      fp?.upside ??
+      clamp(
+        1 +
+          (targetShare > 0.25 ? 2 : targetShare > 0.15 ? 1 : 0) +
+          (offenseFactor > 1.1 ? 2 : offenseFactor > 1 ? 1 : 0),
+        1,
+        5
+      );
+    const bustRisk =
+      fp?.bust ??
+      clamp(1 + (age > 29 ? 1 : 0) + (yearsExp === 0 ? 1 : 0) + (gp > 0 && gp < 10 ? 2 : 0), 1, 5);
+    // Fallback sos (no FantasyPros match) has no real defensive-matchup data source —
+    // illustrative only, deterministic from bye week rather than actual schedule difficulty.
+    const sos = fp?.sos ?? clamp(((byeWeekByTeam.get(team) ?? 10) % 5) + 1, 1, 5);
 
+    // The free contracts dataset is frequently stale for recent extensions (verified
+    // against several 2024/2025 deals), so anything unmatched gets an honest label
+    // derived from real years-in-league instead of asserting a wrong dollar figure.
     const contract = contracts.get(normalizeName(row.full_name));
+    const contractLabel = contract
+      ? `$${Math.round(contract.apy / 1_000_000)}M/yr-${contract.endYear}`
+      : yearsExp <= 3
+        ? "Rookie deal"
+        : "Veteran (contract unlisted)";
 
     byPosition[position].push({
       name: row.full_name,
@@ -199,9 +256,7 @@ async function main() {
       byeWeek: byeWeekByTeam.get(team) ?? 10,
       yearInLeague: yearsExp,
       age,
-      contract: contract
-        ? `$${Math.round(contract.apy / 1_000_000)}M/yr-${contract.endYear}`
-        : "Rookie deal",
+      contract: contractLabel,
       statsJson: JSON.stringify({ passYds, rushYds, recYds, tds, rec, tgts, tov, gp }),
       fps2025: Math.round(fps2025 * 10) / 10,
       ppg2025: Math.round(ppg2025 * 10) / 10,

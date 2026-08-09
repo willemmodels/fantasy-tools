@@ -18,6 +18,9 @@ export function DraftPoolPanel() {
   const players = useRankingsStore((s) => s.players);
   const order = useRankingsStore((s) => s.order);
   const scoringFormat = useRankingsStore((s) => s.scoringFormat);
+  // The draft room has its own auction $ values; Big Baller (a Rankings-only
+  // preview format) has no bearing here, so fall back to PPR for the points column.
+  const pointsFormat = scoringFormat === "BIG_BALLER" ? "PPR" : scoringFormat;
   const [query, setQuery] = useState("");
 
   const draftedIds = useMemo(() => new Set(picks.map((p) => p.playerId)), [picks]);
@@ -70,7 +73,7 @@ export function DraftPoolPanel() {
               </span>
             ) : (
               <span className="w-10 tabular-nums text-[12px] text-[var(--muted-foreground)]">
-                {displayedProjection(player, scoringFormat).toFixed(0)}
+                {displayedProjection(player, pointsFormat).toFixed(0)}
               </span>
             )}
             <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => handleDraftClick(player.id)}>

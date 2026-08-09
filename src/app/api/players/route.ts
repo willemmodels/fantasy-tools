@@ -22,7 +22,6 @@ export async function GET() {
     bustRisk: row.bustRisk,
     offRating: row.offRating,
     proj2026: row.proj2026,
-    adp: Math.round(row.proj2026 > 0 ? 6000 / row.proj2026 : 300),
   }));
 
   return NextResponse.json(players);

@@ -23,19 +23,23 @@ import { PositionPill } from "@/components/shared/position-pill";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useRankingsStore } from "@/store/use-rankings-store";
 import { displayedHistoricalPoints, displayedProjection } from "@/lib/scoring";
-import { computeAuctionValues } from "@/lib/valuation";
+import { useBigBallerValues } from "@/lib/use-big-baller-values";
 import { cn } from "@/lib/utils";
-import { BIG_BALLER_BUDGET, BIG_BALLER_STARTUP_ROSTER, BIG_BALLER_TEAMS, Player } from "@/lib/types";
+import { Player } from "@/lib/types";
+
+const COLUMN_COUNT = 8;
 
 function SortableRow({
   player,
   rank,
   isFiltered,
+  isBigBaller,
   bigBallerValue,
 }: {
   player: Player;
   rank: number;
   isFiltered: boolean;
+  isBigBaller: boolean;
   bigBallerValue?: number;
 }) {
   const scoringFormat = useRankingsStore((s) => s.scoringFormat);
@@ -46,6 +50,11 @@ function SortableRow({
     id: player.id,
     disabled: isFiltered,
   });
+
+  // Big Baller has no points-scoring rule of its own — the historical column
+  // stays PPR-scored for context, while Proj swaps to the auction $ value.
+  // (Comparing scoringFormat itself, not the isBigBaller prop, so TS can narrow it.)
+  const pointsFormat = scoringFormat === "BIG_BALLER" ? "PPR" : scoringFormat;
 
   return (
     <TableRow
@@ -76,17 +85,11 @@ function SortableRow({
       <TableCell className="text-[13px] text-[var(--muted-foreground)]">{player.team}</TableCell>
       <TableCell className="tabular-nums text-[13px]">{player.byeWeek}</TableCell>
       <TableCell className="tabular-nums">
-        {displayedHistoricalPoints(player, scoringFormat).toFixed(0)}
+        {displayedHistoricalPoints(player, pointsFormat).toFixed(0)}
       </TableCell>
       <TableCell className="tabular-nums font-medium">
-        {displayedProjection(player, scoringFormat).toFixed(0)}
+        {isBigBaller ? `$${bigBallerValue ?? 1}` : displayedProjection(player, pointsFormat).toFixed(0)}
       </TableCell>
-      <TableCell className="tabular-nums text-[13px] text-[var(--muted-foreground)]">
-        {player.adp}
-      </TableCell>
-      {bigBallerValue !== undefined && (
-        <TableCell className="tabular-nums font-medium">${bigBallerValue}</TableCell>
-      )}
     </TableRow>
   );
 }
@@ -99,24 +102,13 @@ export function RankingsTable() {
   const searchQuery = useRankingsStore((s) => s.searchQuery);
   const positionFilters = useRankingsStore((s) => s.positionFilters);
   const dragReorder = useRankingsStore((s) => s.dragReorder);
-  const bigBallerMode = useRankingsStore((s) => s.bigBallerMode);
-  const drafted = useRankingsStore((s) => s.drafted);
+  const scoringFormat = useRankingsStore((s) => s.scoringFormat);
+
+  const isBigBaller = scoringFormat === "BIG_BALLER";
+  const bigBallerValues = useBigBallerValues(isBigBaller);
 
   const playerById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
   const tierById = useMemo(() => new Map(tiers.map((t) => [t.id, t.label])), [tiers]);
-
-  // Preview $ values under the Big Baller Startup format (2QB/5WR, 12 teams,
-  // $500 budget) without needing a configured draft room — reuses the same
-  // VORP engine the auction board uses, over the currently-undrafted pool.
-  const bigBallerValues = useMemo(() => {
-    if (!bigBallerMode) return null;
-    const available = players.filter((p) => !drafted[p.id]);
-    return computeAuctionValues(available, {
-      budgetPerTeam: BIG_BALLER_BUDGET,
-      teams: BIG_BALLER_TEAMS,
-      roster: BIG_BALLER_STARTUP_ROSTER,
-    });
-  }, [bigBallerMode, players, drafted]);
 
   const isFiltered = searchQuery.trim().length > 0 || positionFilters.length > 0;
 
@@ -171,9 +163,7 @@ export function RankingsTable() {
             <TableHead>Team</TableHead>
             <TableHead>Bye</TableHead>
             <TableHead>2025 Pts</TableHead>
-            <TableHead>Proj</TableHead>
-            <TableHead>ADP</TableHead>
-            {bigBallerMode && <TableHead>Big Baller $</TableHead>}
+            <TableHead>{isBigBaller ? "Value" : "Proj"}</TableHead>
           </TableRow>
         </TableHeader>
         <SortableContext
@@ -186,7 +176,7 @@ export function RankingsTable() {
                 {showTierHeader && tierId && (
                   <TableRow className="bg-[var(--surface-muted)] hover:bg-[var(--surface-muted)]">
                     <TableCell
-                      colSpan={bigBallerMode ? 10 : 9}
+                      colSpan={COLUMN_COUNT}
                       className="py-1.5 text-[12px] font-medium text-[var(--muted-foreground)]"
                     >
                       {tierById.get(tierId) ?? "Tier"}
@@ -197,6 +187,7 @@ export function RankingsTable() {
                   player={player}
                   rank={rank}
                   isFiltered={isFiltered}
+                  isBigBaller={isBigBaller}
                   bigBallerValue={bigBallerValues?.get(player.id)}
                 />
               </Fragment>

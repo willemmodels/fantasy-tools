@@ -24,6 +24,9 @@ export function ComparisonTable() {
   const players = useRankingsStore((s) => s.players);
   const order = useRankingsStore((s) => s.order);
   const scoringFormat = useRankingsStore((s) => s.scoringFormat);
+  // The trade comparison always shows points, even if Rankings is set to
+  // the Big Baller $ format — fall back to PPR rather than a dollar figure.
+  const pointsFormat = scoringFormat === "BIG_BALLER" ? "PPR" : scoringFormat;
   const [query, setQuery] = useState("");
 
   const playerById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
@@ -46,14 +49,13 @@ export function ComparisonTable() {
 
   const rows: StatRow[] = [
     { label: "Rank", higherIsBetter: false, value: (_p, rank) => rank },
-    { label: "2025 pts", higherIsBetter: true, value: (p) => displayedHistoricalPoints(p, scoringFormat) },
-    { label: "Proj 2026", higherIsBetter: true, value: (p) => displayedProjection(p, scoringFormat) },
+    { label: "2025 pts", higherIsBetter: true, value: (p) => displayedHistoricalPoints(p, pointsFormat) },
+    { label: "Proj 2026", higherIsBetter: true, value: (p) => displayedProjection(p, pointsFormat) },
     { label: "Rushing yards", higherIsBetter: true, value: (p) => p.stats2025.rushYds },
     { label: "Receptions", higherIsBetter: true, value: (p) => p.stats2025.rec },
     { label: "Receiving yards", higherIsBetter: true, value: (p) => p.stats2025.recYds },
     { label: "Total TDs", higherIsBetter: true, value: (p) => p.stats2025.tds },
     { label: "Games played", higherIsBetter: true, value: (p) => p.stats2025.gp },
-    { label: "ADP", higherIsBetter: false, value: (p) => p.adp },
   ];
 
   const byeGroups = new Map<number, number>();

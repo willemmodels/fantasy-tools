@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Player, ScoringFormat, Tier } from "@/lib/types";
+import { Player, RankingsFormat, Tier } from "@/lib/types";
 
 interface RankingsState {
   players: Player[];
@@ -9,22 +9,20 @@ interface RankingsState {
   tierOf: Record<string, string | null>;
   notes: Record<string, string>;
   drafted: Record<string, boolean>;
-  scoringFormat: ScoringFormat;
-  bigBallerMode: boolean;
+  scoringFormat: RankingsFormat;
   searchQuery: string;
   positionFilters: string[];
   selectedPlayerId: string | null;
 
   setPlayers: (players: Player[]) => void;
   dragReorder: (activeId: string, overId: string) => void;
-  addTier: (label: string) => void;
+  addTier: () => void;
   renameTier: (tierId: string, label: string) => void;
   removeTier: (tierId: string) => void;
   setTierForPlayer: (playerId: string, tierId: string | null) => void;
   setNote: (playerId: string, note: string) => void;
   toggleDrafted: (playerId: string) => void;
-  setScoringFormat: (format: ScoringFormat) => void;
-  toggleBigBallerMode: () => void;
+  setScoringFormat: (format: RankingsFormat) => void;
   setSearchQuery: (query: string) => void;
   togglePositionFilter: (position: string) => void;
   setSelectedPlayerId: (playerId: string | null) => void;
@@ -36,6 +34,15 @@ const DEFAULT_TIERS: Tier[] = [
   { id: "tier-3", label: "Tier 3 — Solid depth" },
 ];
 
+export const MAX_TIERS = 10;
+
+// "Tier N" → N, so a fresh tier always continues the existing sequence
+// instead of a random/large number (e.g. a timestamp).
+function tierNumber(label: string): number {
+  const match = label.match(/^Tier (\d+)/);
+  return match ? Number(match[1]) : 0;
+}
+
 export const useRankingsStore = create<RankingsState>()(
   persist(
     (set, get) => ({
@@ -46,7 +53,6 @@ export const useRankingsStore = create<RankingsState>()(
       notes: {},
       drafted: {},
       scoringFormat: "PPR",
-      bigBallerMode: false,
       searchQuery: "",
       positionFilters: [],
       selectedPlayerId: null,
@@ -82,9 +88,11 @@ export const useRankingsStore = create<RankingsState>()(
         set({ order, tierOf });
       },
 
-      addTier: (label) => {
-        const id = `tier-${Date.now()}`;
-        set({ tiers: [...get().tiers, { id, label }] });
+      addTier: () => {
+        const tiers = get().tiers;
+        if (tiers.length >= MAX_TIERS) return;
+        const next = Math.max(0, ...tiers.map((t) => tierNumber(t.label))) + 1;
+        set({ tiers: [...tiers, { id: `tier-${next}`, label: `Tier ${next}` }] });
       },
 
       renameTier: (tierId, label) => {
@@ -116,7 +124,6 @@ export const useRankingsStore = create<RankingsState>()(
       },
 
       setScoringFormat: (format) => set({ scoringFormat: format }),
-      toggleBigBallerMode: () => set({ bigBallerMode: !get().bigBallerMode }),
       setSearchQuery: (query) => set({ searchQuery: query }),
 
       togglePositionFilter: (position) => {
@@ -139,7 +146,6 @@ export const useRankingsStore = create<RankingsState>()(
         notes: state.notes,
         drafted: state.drafted,
         scoringFormat: state.scoringFormat,
-        bigBallerMode: state.bigBallerMode,
       }),
     }
   )
