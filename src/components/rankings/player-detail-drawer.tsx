@@ -19,7 +19,6 @@ import {
 import { PositionPill } from "@/components/shared/position-pill";
 import { useRankingsStore } from "@/store/use-rankings-store";
 import { displayedHistoricalPoints, displayedProjection } from "@/lib/scoring";
-import { useBigBallerValues } from "@/lib/use-big-baller-values";
 
 const STAT_ROWS: { key: keyof import("@/lib/types").SeasonStats; label: string }[] = [
   { key: "passYds", label: "Passing yards" },
@@ -44,9 +43,6 @@ export function PlayerDetailDrawer() {
   const drafted = useRankingsStore((s) => s.drafted);
   const toggleDrafted = useRankingsStore((s) => s.toggleDrafted);
   const scoringFormat = useRankingsStore((s) => s.scoringFormat);
-  const isBigBaller = scoringFormat === "BIG_BALLER";
-  const pointsFormat = isBigBaller ? "PPR" : scoringFormat;
-  const bigBallerValues = useBigBallerValues(isBigBaller);
 
   const player = players.find((p) => p.id === selectedPlayerId) ?? null;
 
@@ -76,17 +72,13 @@ export function PlayerDetailDrawer() {
                 <div>
                   <p className="text-[12px] text-[var(--muted-foreground)]">2025 Pts</p>
                   <p className="text-lg font-medium tabular-nums">
-                    {displayedHistoricalPoints(player, pointsFormat).toFixed(0)}
+                    {displayedHistoricalPoints(player, scoringFormat).toFixed(0)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[12px] text-[var(--muted-foreground)]">
-                    {isBigBaller ? "Big Baller $" : "Proj 2026"}
-                  </p>
+                  <p className="text-[12px] text-[var(--muted-foreground)]">Proj 2026</p>
                   <p className="text-lg font-medium tabular-nums">
-                    {isBigBaller
-                      ? `$${bigBallerValues?.get(player.id) ?? 1}`
-                      : displayedProjection(player, pointsFormat).toFixed(0)}
+                    {displayedProjection(player, scoringFormat).toFixed(0)}
                   </p>
                 </div>
                 <div>

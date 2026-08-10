@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Player, RankingsFormat, Tier } from "@/lib/types";
+import { Player, ScoringFormat, Tier } from "@/lib/types";
 
 interface RankingsState {
   players: Player[];
@@ -9,7 +9,7 @@ interface RankingsState {
   tierOf: Record<string, string | null>;
   notes: Record<string, string>;
   drafted: Record<string, boolean>;
-  scoringFormat: RankingsFormat;
+  scoringFormat: ScoringFormat;
   searchQuery: string;
   positionFilters: string[];
   selectedPlayerId: string | null;
@@ -22,7 +22,7 @@ interface RankingsState {
   setTierForPlayer: (playerId: string, tierId: string | null) => void;
   setNote: (playerId: string, note: string) => void;
   toggleDrafted: (playerId: string) => void;
-  setScoringFormat: (format: RankingsFormat) => void;
+  setScoringFormat: (format: ScoringFormat) => void;
   setSearchQuery: (query: string) => void;
   togglePositionFilter: (position: string) => void;
   setSelectedPlayerId: (playerId: string | null) => void;

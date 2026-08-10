@@ -23,7 +23,6 @@ import { PositionPill } from "@/components/shared/position-pill";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useRankingsStore } from "@/store/use-rankings-store";
 import { displayedHistoricalPoints, displayedProjection } from "@/lib/scoring";
-import { useBigBallerValues } from "@/lib/use-big-baller-values";
 import { cn } from "@/lib/utils";
 import { Player } from "@/lib/types";
 
@@ -33,14 +32,10 @@ function SortableRow({
   player,
   rank,
   isFiltered,
-  isBigBaller,
-  bigBallerValue,
 }: {
   player: Player;
   rank: number;
   isFiltered: boolean;
-  isBigBaller: boolean;
-  bigBallerValue?: number;
 }) {
   const scoringFormat = useRankingsStore((s) => s.scoringFormat);
   const setSelectedPlayerId = useRankingsStore((s) => s.setSelectedPlayerId);
@@ -50,11 +45,6 @@ function SortableRow({
     id: player.id,
     disabled: isFiltered,
   });
-
-  // Big Baller has no points-scoring rule of its own — the historical column
-  // stays PPR-scored for context, while Proj swaps to the auction $ value.
-  // (Comparing scoringFormat itself, not the isBigBaller prop, so TS can narrow it.)
-  const pointsFormat = scoringFormat === "BIG_BALLER" ? "PPR" : scoringFormat;
 
   return (
     <TableRow
@@ -85,10 +75,10 @@ function SortableRow({
       <TableCell className="text-[13px] text-[var(--muted-foreground)]">{player.team}</TableCell>
       <TableCell className="tabular-nums text-[13px]">{player.byeWeek}</TableCell>
       <TableCell className="tabular-nums">
-        {displayedHistoricalPoints(player, pointsFormat).toFixed(0)}
+        {displayedHistoricalPoints(player, scoringFormat).toFixed(0)}
       </TableCell>
       <TableCell className="tabular-nums font-medium">
-        {isBigBaller ? `$${bigBallerValue ?? 1}` : displayedProjection(player, pointsFormat).toFixed(0)}
+        {displayedProjection(player, scoringFormat).toFixed(0)}
       </TableCell>
     </TableRow>
   );
@@ -102,10 +92,6 @@ export function RankingsTable() {
   const searchQuery = useRankingsStore((s) => s.searchQuery);
   const positionFilters = useRankingsStore((s) => s.positionFilters);
   const dragReorder = useRankingsStore((s) => s.dragReorder);
-  const scoringFormat = useRankingsStore((s) => s.scoringFormat);
-
-  const isBigBaller = scoringFormat === "BIG_BALLER";
-  const bigBallerValues = useBigBallerValues(isBigBaller);
 
   const playerById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
   const tierById = useMemo(() => new Map(tiers.map((t) => [t.id, t.label])), [tiers]);
@@ -163,7 +149,7 @@ export function RankingsTable() {
             <TableHead>Team</TableHead>
             <TableHead>Bye</TableHead>
             <TableHead>2025 Pts</TableHead>
-            <TableHead>{isBigBaller ? "Value" : "Proj"}</TableHead>
+            <TableHead>Proj</TableHead>
           </TableRow>
         </TableHeader>
         <SortableContext
@@ -183,13 +169,7 @@ export function RankingsTable() {
                     </TableCell>
                   </TableRow>
                 )}
-                <SortableRow
-                  player={player}
-                  rank={rank}
-                  isFiltered={isFiltered}
-                  isBigBaller={isBigBaller}
-                  bigBallerValue={bigBallerValues?.get(player.id)}
-                />
+                <SortableRow player={player} rank={rank} isFiltered={isFiltered} />
               </Fragment>
             ))}
           </TableBody>

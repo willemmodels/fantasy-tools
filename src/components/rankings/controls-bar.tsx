@@ -10,15 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { POSITIONS, RankingsFormat } from "@/lib/types";
+import { POSITIONS, ScoringFormat } from "@/lib/types";
 import { MAX_TIERS, useRankingsStore } from "@/store/use-rankings-store";
 import { cn } from "@/lib/utils";
 
-const FORMAT_LABELS: Record<RankingsFormat, string> = {
+const FORMAT_LABELS: Record<ScoringFormat, string> = {
   PPR: "PPR",
   HALF: "Half-PPR",
   STD: "Standard",
-  BIG_BALLER: "Big Baller",
 };
 
 export function ControlsBar() {
@@ -65,15 +64,14 @@ export function ControlsBar() {
           })}
         </div>
 
-        <Select value={scoringFormat} onValueChange={(v) => setScoringFormat(v as RankingsFormat)}>
-          <SelectTrigger className="h-9 w-[150px]">
-            <SelectValue>{(value: RankingsFormat) => FORMAT_LABELS[value]}</SelectValue>
+        <Select value={scoringFormat} onValueChange={(v) => setScoringFormat(v as ScoringFormat)}>
+          <SelectTrigger className="h-9 w-[130px]">
+            <SelectValue>{(value: ScoringFormat) => FORMAT_LABELS[value]}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="PPR">PPR</SelectItem>
             <SelectItem value="HALF">Half-PPR</SelectItem>
             <SelectItem value="STD">Standard</SelectItem>
-            <SelectItem value="BIG_BALLER">Big Baller</SelectItem>
           </SelectContent>
         </Select>
 

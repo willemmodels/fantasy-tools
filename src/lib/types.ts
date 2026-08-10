@@ -4,11 +4,6 @@ export const POSITIONS: Position[] = ["QB", "RB", "WR", "TE", "K"];
 
 export type ScoringFormat = "PPR" | "HALF" | "STD";
 
-// The Rankings page's format selector adds "BIG_BALLER" as a peer of the three
-// point-scoring formats — selecting it swaps the Proj column for a live auction
-// $ value under the Big Baller Startup preset instead of a points projection.
-export type RankingsFormat = ScoringFormat | "BIG_BALLER";
-
 export interface SeasonStats {
   passYds: number;
   rushYds: number;
