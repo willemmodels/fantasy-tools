@@ -1,12 +1,16 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Player, ScoringFormat, Tier } from "@/lib/types";
+import { Player, RankingsMode, ScoringFormat, Tier } from "@/lib/types";
 
 interface RankingsState {
   players: Player[];
+  mode: RankingsMode;
   order: string[];
   tiers: Tier[];
   tierOf: Record<string, string | null>;
+  bigBallerOrder: string[];
+  bigBallerTiers: Tier[];
+  bigBallerTierOf: Record<string, string | null>;
   notes: Record<string, string>;
   drafted: Record<string, boolean>;
   scoringFormat: ScoringFormat;
@@ -15,6 +19,7 @@ interface RankingsState {
   selectedPlayerId: string | null;
 
   setPlayers: (players: Player[]) => void;
+  setMode: (mode: RankingsMode) => void;
   dragReorder: (activeId: string, overId: string) => void;
   addTier: () => void;
   renameTier: (tierId: string, label: string) => void;
@@ -43,13 +48,32 @@ function tierNumber(label: string): number {
   return match ? Number(match[1]) : 0;
 }
 
+// Rankings and Big Baller keep entirely separate order/tiers/tierOf —
+// they're different draft strategies (12-team single-QB vs. 4-team
+// 2QB/20-bench), so a player's spot in one has no bearing on the other.
+// These key pairs let the order/tier actions below stay mode-generic
+// instead of duplicating every action for each mode.
+function orderKey(mode: RankingsMode): "order" | "bigBallerOrder" {
+  return mode === "BIG_BALLER" ? "bigBallerOrder" : "order";
+}
+function tiersKey(mode: RankingsMode): "tiers" | "bigBallerTiers" {
+  return mode === "BIG_BALLER" ? "bigBallerTiers" : "tiers";
+}
+function tierOfKey(mode: RankingsMode): "tierOf" | "bigBallerTierOf" {
+  return mode === "BIG_BALLER" ? "bigBallerTierOf" : "tierOf";
+}
+
 export const useRankingsStore = create<RankingsState>()(
   persist(
     (set, get) => ({
       players: [],
+      mode: "STANDARD",
       order: [],
       tiers: DEFAULT_TIERS,
       tierOf: {},
+      bigBallerOrder: [],
+      bigBallerTiers: DEFAULT_TIERS.map((t) => ({ ...t })),
+      bigBallerTierOf: {},
       notes: {},
       drafted: {},
       scoringFormat: "PPR",
@@ -58,20 +82,31 @@ export const useRankingsStore = create<RankingsState>()(
       selectedPlayerId: null,
 
       setPlayers: (players) => {
-        const existingOrder = get().order;
-        const knownIds = new Set(existingOrder);
         const incomingIds = new Set(players.map((p) => p.id));
-        const survivingOrder = existingOrder.filter((id) => incomingIds.has(id));
-        const newIds = players
-          .filter((p) => !knownIds.has(p.id))
-          .sort((a, b) => b.proj2026 - a.proj2026)
-          .map((p) => p.id);
-        set({ players, order: [...survivingOrder, ...newIds] });
+        function reconcile(existingOrder: string[]) {
+          const knownIds = new Set(existingOrder);
+          const survivingOrder = existingOrder.filter((id) => incomingIds.has(id));
+          const newIds = players
+            .filter((p) => !knownIds.has(p.id))
+            .sort((a, b) => b.proj2026 - a.proj2026)
+            .map((p) => p.id);
+          return [...survivingOrder, ...newIds];
+        }
+        set({
+          players,
+          order: reconcile(get().order),
+          bigBallerOrder: reconcile(get().bigBallerOrder),
+        });
       },
+
+      setMode: (mode) => set({ mode }),
 
       dragReorder: (activeId, overId) => {
         if (activeId === overId) return;
-        const order = [...get().order];
+        const mode = get().mode;
+        const oKey = orderKey(mode);
+        const tKey = tierOfKey(mode);
+        const order = [...get()[oKey]];
         const fromIndex = order.indexOf(activeId);
         const toIndex = order.indexOf(overId);
         if (fromIndex === -1 || toIndex === -1) return;
@@ -81,36 +116,48 @@ export const useRankingsStore = create<RankingsState>()(
         // Landing inside a tier's block reassigns the dragged player to that tier —
         // tiers are just contiguous runs within `order`, keyed by tierOf.
         const newIndex = order.indexOf(activeId);
-        const tierOf = { ...get().tierOf };
+        const tierOf = { ...get()[tKey] };
         const neighborId = order[newIndex - 1] ?? order[newIndex + 1] ?? null;
         tierOf[activeId] = neighborId ? tierOf[neighborId] ?? null : null;
 
-        set({ order, tierOf });
+        set({ [oKey]: order, [tKey]: tierOf } as Partial<RankingsState>);
       },
 
       addTier: () => {
-        const tiers = get().tiers;
+        const mode = get().mode;
+        const tKey = tiersKey(mode);
+        const tiers = get()[tKey];
         if (tiers.length >= MAX_TIERS) return;
         const next = Math.max(0, ...tiers.map((t) => tierNumber(t.label))) + 1;
-        set({ tiers: [...tiers, { id: `tier-${next}`, label: `Tier ${next}` }] });
+        set({ [tKey]: [...tiers, { id: `tier-${next}`, label: `Tier ${next}` }] } as Partial<RankingsState>);
       },
 
       renameTier: (tierId, label) => {
+        const mode = get().mode;
+        const tKey = tiersKey(mode);
         set({
-          tiers: get().tiers.map((t) => (t.id === tierId ? { ...t, label } : t)),
-        });
+          [tKey]: get()[tKey].map((t) => (t.id === tierId ? { ...t, label } : t)),
+        } as Partial<RankingsState>);
       },
 
       removeTier: (tierId) => {
-        const tierOf = { ...get().tierOf };
+        const mode = get().mode;
+        const tKey = tiersKey(mode);
+        const toKey = tierOfKey(mode);
+        const tierOf = { ...get()[toKey] };
         for (const playerId of Object.keys(tierOf)) {
           if (tierOf[playerId] === tierId) tierOf[playerId] = null;
         }
-        set({ tiers: get().tiers.filter((t) => t.id !== tierId), tierOf });
+        set({
+          [tKey]: get()[tKey].filter((t) => t.id !== tierId),
+          [toKey]: tierOf,
+        } as Partial<RankingsState>);
       },
 
       setTierForPlayer: (playerId, tierId) => {
-        set({ tierOf: { ...get().tierOf, [playerId]: tierId } });
+        const mode = get().mode;
+        const toKey = tierOfKey(mode);
+        set({ [toKey]: { ...get()[toKey], [playerId]: tierId } } as Partial<RankingsState>);
       },
 
       setNote: (playerId, note) => {
@@ -140,9 +187,13 @@ export const useRankingsStore = create<RankingsState>()(
     {
       name: "rankings-store",
       partialize: (state) => ({
+        mode: state.mode,
         order: state.order,
         tiers: state.tiers,
         tierOf: state.tierOf,
+        bigBallerOrder: state.bigBallerOrder,
+        bigBallerTiers: state.bigBallerTiers,
+        bigBallerTierOf: state.bigBallerTierOf,
         notes: state.notes,
         drafted: state.drafted,
         scoringFormat: state.scoringFormat,
@@ -150,3 +201,16 @@ export const useRankingsStore = create<RankingsState>()(
     }
   )
 );
+
+// The active order/tiers/tierOf for whichever mode (Standard vs. Big Baller)
+// is currently selected — components should read through these rather than
+// the raw `order`/`tiers`/`tierOf` fields so they follow the mode toggle.
+export function useActiveOrder(): string[] {
+  return useRankingsStore((s) => (s.mode === "BIG_BALLER" ? s.bigBallerOrder : s.order));
+}
+export function useActiveTiers(): Tier[] {
+  return useRankingsStore((s) => (s.mode === "BIG_BALLER" ? s.bigBallerTiers : s.tiers));
+}
+export function useActiveTierOf(): Record<string, string | null> {
+  return useRankingsStore((s) => (s.mode === "BIG_BALLER" ? s.bigBallerTierOf : s.tierOf));
+}

@@ -10,9 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { POSITIONS, ScoringFormat } from "@/lib/types";
-import { MAX_TIERS, useRankingsStore } from "@/store/use-rankings-store";
+import { POSITIONS, RankingsMode, ScoringFormat } from "@/lib/types";
+import { MAX_TIERS, useActiveTiers, useRankingsStore } from "@/store/use-rankings-store";
 import { cn } from "@/lib/utils";
+
+const MODE_LABELS: Record<RankingsMode, string> = {
+  STANDARD: "Standard",
+  BIG_BALLER: "Big Baller",
+};
 
 const FORMAT_LABELS: Record<ScoringFormat, string> = {
   PPR: "PPR",
@@ -27,8 +32,10 @@ export function ControlsBar() {
   const togglePositionFilter = useRankingsStore((s) => s.togglePositionFilter);
   const scoringFormat = useRankingsStore((s) => s.scoringFormat);
   const setScoringFormat = useRankingsStore((s) => s.setScoringFormat);
+  const mode = useRankingsStore((s) => s.mode);
+  const setMode = useRankingsStore((s) => s.setMode);
   const addTier = useRankingsStore((s) => s.addTier);
-  const tiers = useRankingsStore((s) => s.tiers);
+  const tiers = useActiveTiers();
   const removeTier = useRankingsStore((s) => s.removeTier);
 
   return (
@@ -42,6 +49,23 @@ export function ControlsBar() {
             placeholder="Search players…"
             className="h-9 pl-8"
           />
+        </div>
+
+        <div className="flex items-center gap-1 rounded-[8px] border border-[var(--border)] p-0.5">
+          {(Object.keys(MODE_LABELS) as RankingsMode[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={cn(
+                "rounded-[6px] px-2.5 py-1 text-sm transition-colors",
+                mode === m
+                  ? "bg-[var(--surface-muted)] font-medium"
+                  : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              )}
+            >
+              {MODE_LABELS[m]}
+            </button>
+          ))}
         </div>
 
         <div className="flex items-center gap-1">

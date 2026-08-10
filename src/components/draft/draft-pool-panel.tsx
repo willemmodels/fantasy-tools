@@ -16,9 +16,12 @@ export function DraftPoolPanel() {
   const nominate = useDraftStore((s) => s.nominate);
   const draftPlayer = useDraftStore((s) => s.draftPlayer);
   const players = useRankingsStore((s) => s.players);
-  const order = useRankingsStore((s) => s.order);
+  const standardOrder = useRankingsStore((s) => s.order);
+  const bigBallerOrder = useRankingsStore((s) => s.bigBallerOrder);
   const scoringFormat = useRankingsStore((s) => s.scoringFormat);
   const [query, setQuery] = useState("");
+
+  const order = config?.isBigBaller ? bigBallerOrder : standardOrder;
 
   const draftedIds = useMemo(() => new Set(picks.map((p) => p.playerId)), [picks]);
   const playerById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);

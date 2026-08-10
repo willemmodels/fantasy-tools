@@ -49,12 +49,14 @@ export function RoomConfigModal() {
   const [roster, setRoster] = useState<RosterConfig>(DEFAULT_ROSTER);
   const [budget, setBudget] = useState(200);
   const [userSlot, setUserSlot] = useState(1);
+  const [isBigBaller, setIsBigBaller] = useState(false);
 
   function applyBigBallerPreset() {
     setDraftType("AUCTION");
     setBudget(BIG_BALLER_BUDGET);
     setRoster(BIG_BALLER_STARTUP_ROSTER);
     setTeams(BIG_BALLER_TEAMS);
+    setIsBigBaller(true);
   }
 
   function handleStart() {
@@ -62,7 +64,7 @@ export function RoomConfigModal() {
       i === userSlot - 1 ? "You" : `Team ${i + 1}`
     );
     configure(
-      { scoring, draftType, teams, roster, budget, userSlot, started: true },
+      { scoring, draftType, teams, roster, budget, userSlot, started: true, isBigBaller },
       teamNames
     );
   }
@@ -165,9 +167,21 @@ export function RoomConfigModal() {
         </div>
 
         <DialogFooter className="items-center sm:justify-between">
-          <Button variant="outline" size="sm" onClick={applyBigBallerPreset}>
-            Big Baller Startup preset
-          </Button>
+          <div className="flex flex-col gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={applyBigBallerPreset}
+              className={isBigBaller ? "border-[var(--foreground)]" : undefined}
+            >
+              Big Baller Startup preset
+            </Button>
+            {isBigBaller && (
+              <span className="text-[11px] text-[var(--muted-foreground)]">
+                Auction values will use your Big Baller rankings
+              </span>
+            )}
+          </div>
           <Button onClick={handleStart}>Start draft</Button>
         </DialogFooter>
       </DialogContent>

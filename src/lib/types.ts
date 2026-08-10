@@ -4,6 +4,8 @@ export const POSITIONS: Position[] = ["QB", "RB", "WR", "TE", "K"];
 
 export type ScoringFormat = "PPR" | "HALF" | "STD";
 
+export type RankingsMode = "STANDARD" | "BIG_BALLER";
+
 export interface SeasonStats {
   passYds: number;
   rushYds: number;
@@ -88,6 +90,7 @@ export interface DraftRoomConfig {
   budget: number;
   userSlot: number;
   started: boolean;
+  isBigBaller: boolean;
 }
 
 export type TradeAssetType = "PLAYER" | "PICK" | "FAAB";
