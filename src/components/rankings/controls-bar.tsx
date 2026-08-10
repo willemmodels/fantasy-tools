@@ -3,26 +3,15 @@
 import { Search, Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { POSITIONS, RankingsMode, ScoringFormat } from "@/lib/types";
-import { MAX_TIERS, useActiveTiers, useRankingsStore } from "@/store/use-rankings-store";
+import { POSITIONS, RankingsList } from "@/lib/types";
+import { MAX_TIERS, RANKINGS_LISTS, useActiveTiers, useRankingsStore } from "@/store/use-rankings-store";
 import { cn } from "@/lib/utils";
 
-const MODE_LABELS: Record<RankingsMode, string> = {
-  STANDARD: "Standard",
-  BIG_BALLER: "Big Baller",
-};
-
-const FORMAT_LABELS: Record<ScoringFormat, string> = {
+const LIST_LABELS: Record<RankingsList, string> = {
   PPR: "PPR",
   HALF: "Half-PPR",
   STD: "Standard",
+  BIG_BALLER: "Big Baller",
 };
 
 export function ControlsBar() {
@@ -30,10 +19,8 @@ export function ControlsBar() {
   const setSearchQuery = useRankingsStore((s) => s.setSearchQuery);
   const positionFilters = useRankingsStore((s) => s.positionFilters);
   const togglePositionFilter = useRankingsStore((s) => s.togglePositionFilter);
-  const scoringFormat = useRankingsStore((s) => s.scoringFormat);
-  const setScoringFormat = useRankingsStore((s) => s.setScoringFormat);
-  const mode = useRankingsStore((s) => s.mode);
-  const setMode = useRankingsStore((s) => s.setMode);
+  const activeList = useRankingsStore((s) => s.activeList);
+  const setActiveList = useRankingsStore((s) => s.setActiveList);
   const addTier = useRankingsStore((s) => s.addTier);
   const tiers = useActiveTiers();
   const removeTier = useRankingsStore((s) => s.removeTier);
@@ -52,18 +39,18 @@ export function ControlsBar() {
         </div>
 
         <div className="flex items-center gap-1 rounded-[8px] border border-[var(--border)] p-0.5">
-          {(Object.keys(MODE_LABELS) as RankingsMode[]).map((m) => (
+          {RANKINGS_LISTS.map((list) => (
             <button
-              key={m}
-              onClick={() => setMode(m)}
+              key={list}
+              onClick={() => setActiveList(list)}
               className={cn(
                 "rounded-[6px] px-2.5 py-1 text-sm transition-colors",
-                mode === m
+                activeList === list
                   ? "bg-[var(--surface-muted)] font-medium"
                   : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
               )}
             >
-              {MODE_LABELS[m]}
+              {LIST_LABELS[list]}
             </button>
           ))}
         </div>
@@ -87,17 +74,6 @@ export function ControlsBar() {
             );
           })}
         </div>
-
-        <Select value={scoringFormat} onValueChange={(v) => setScoringFormat(v as ScoringFormat)}>
-          <SelectTrigger className="h-9 w-[130px]">
-            <SelectValue>{(value: ScoringFormat) => FORMAT_LABELS[value]}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="PPR">PPR</SelectItem>
-            <SelectItem value="HALF">Half-PPR</SelectItem>
-            <SelectItem value="STD">Standard</SelectItem>
-          </SelectContent>
-        </Select>
 
         <Button
           variant="outline"

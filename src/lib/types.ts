@@ -4,7 +4,12 @@ export const POSITIONS: Position[] = ["QB", "RB", "WR", "TE", "K"];
 
 export type ScoringFormat = "PPR" | "HALF" | "STD";
 
-export type RankingsMode = "STANDARD" | "BIG_BALLER";
+// A player's rank can legitimately differ across these four contexts (a
+// Half-PPR TE isn't worth the same slot as in Standard, and Big Baller's
+// 2QB/20-bench construct isn't a scoring format at all but still needs its
+// own list) — each one gets a fully independent order/tiers in the
+// rankings store, keyed by this type.
+export type RankingsList = "PPR" | "HALF" | "STD" | "BIG_BALLER";
 
 export interface SeasonStats {
   passYds: number;

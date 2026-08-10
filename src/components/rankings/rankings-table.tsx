@@ -21,7 +21,13 @@ import { GripVertical } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PositionPill } from "@/components/shared/position-pill";
 import { EmptyState } from "@/components/shared/empty-state";
-import { useActiveOrder, useActiveTierOf, useActiveTiers, useRankingsStore } from "@/store/use-rankings-store";
+import {
+  useActiveOrder,
+  useActiveTierOf,
+  useActiveTiers,
+  useDisplayScoringFormat,
+  useRankingsStore,
+} from "@/store/use-rankings-store";
 import { displayedHistoricalPoints, displayedProjection } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
 import { Player } from "@/lib/types";
@@ -37,7 +43,7 @@ function SortableRow({
   rank: number;
   isFiltered: boolean;
 }) {
-  const scoringFormat = useRankingsStore((s) => s.scoringFormat);
+  const scoringFormat = useDisplayScoringFormat();
   const setSelectedPlayerId = useRankingsStore((s) => s.setSelectedPlayerId);
   const drafted = useRankingsStore((s) => s.drafted[player.id]);
 

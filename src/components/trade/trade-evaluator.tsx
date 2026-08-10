@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { DndContext, DragEndEvent } from "@dnd-kit/core";
 import { Plus } from "lucide-react";
 import { useTradeStore } from "@/store/use-trade-store";
-import { useRankingsStore } from "@/store/use-rankings-store";
+import { useActiveOrder, useRankingsStore } from "@/store/use-rankings-store";
 import { TradeDropZone } from "./trade-drop-zone";
 import { TradeAssetChip } from "./trade-asset-chip";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ export function TradeEvaluator() {
   const removeAsset = useTradeStore((s) => s.removeAsset);
   const clearAssets = useTradeStore((s) => s.clearAssets);
   const players = useRankingsStore((s) => s.players);
-  const order = useRankingsStore((s) => s.order);
+  const order = useActiveOrder();
 
   const [playerQuery, setPlayerQuery] = useState("");
   const [pickValue, setPickValue] = useState(10);

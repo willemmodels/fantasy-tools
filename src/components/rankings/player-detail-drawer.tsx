@@ -17,7 +17,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PositionPill } from "@/components/shared/position-pill";
-import { useActiveTierOf, useActiveTiers, useRankingsStore } from "@/store/use-rankings-store";
+import {
+  useActiveTierOf,
+  useActiveTiers,
+  useDisplayScoringFormat,
+  useRankingsStore,
+} from "@/store/use-rankings-store";
 import { displayedHistoricalPoints, displayedProjection } from "@/lib/scoring";
 
 const STAT_ROWS: { key: keyof import("@/lib/types").SeasonStats; label: string }[] = [
@@ -42,7 +47,7 @@ export function PlayerDetailDrawer() {
   const setNote = useRankingsStore((s) => s.setNote);
   const drafted = useRankingsStore((s) => s.drafted);
   const toggleDrafted = useRankingsStore((s) => s.toggleDrafted);
-  const scoringFormat = useRankingsStore((s) => s.scoringFormat);
+  const scoringFormat = useDisplayScoringFormat();
 
   const player = players.find((p) => p.id === selectedPlayerId) ?? null;
 

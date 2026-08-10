@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useDraftStore, currentSnakeTeamIndex } from "@/store/use-draft-store";
-import { useRankingsStore } from "@/store/use-rankings-store";
+import { listDisplayFormat, useRankingsStore } from "@/store/use-rankings-store";
+import { RankingsList } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PositionPill } from "@/components/shared/position-pill";
@@ -16,12 +17,15 @@ export function DraftPoolPanel() {
   const nominate = useDraftStore((s) => s.nominate);
   const draftPlayer = useDraftStore((s) => s.draftPlayer);
   const players = useRankingsStore((s) => s.players);
-  const standardOrder = useRankingsStore((s) => s.order);
-  const bigBallerOrder = useRankingsStore((s) => s.bigBallerOrder);
-  const scoringFormat = useRankingsStore((s) => s.scoringFormat);
+  const orders = useRankingsStore((s) => s.orders);
   const [query, setQuery] = useState("");
 
-  const order = config?.isBigBaller ? bigBallerOrder : standardOrder;
+  // The room's scoring/Big-Baller choice picks which of the four rankings
+  // lists supplies pool order + auction pricing — a Half-PPR room pulls
+  // your Half-PPR list, a Big Baller Startup room pulls your Big Baller list.
+  const list: RankingsList = config?.isBigBaller ? "BIG_BALLER" : config?.scoring ?? "PPR";
+  const order = orders[list];
+  const scoringFormat = listDisplayFormat(list);
 
   const draftedIds = useMemo(() => new Set(picks.map((p) => p.playerId)), [picks]);
   const playerById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);

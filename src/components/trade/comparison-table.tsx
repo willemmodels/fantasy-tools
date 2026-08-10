@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { useTradeStore } from "@/store/use-trade-store";
-import { useRankingsStore } from "@/store/use-rankings-store";
+import { useActiveOrder, useDisplayScoringFormat, useRankingsStore } from "@/store/use-rankings-store";
 import { PositionPill } from "@/components/shared/position-pill";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Input } from "@/components/ui/input";
@@ -22,8 +22,8 @@ export function ComparisonTable() {
   const addToComparison = useTradeStore((s) => s.addToComparison);
   const removeFromComparison = useTradeStore((s) => s.removeFromComparison);
   const players = useRankingsStore((s) => s.players);
-  const order = useRankingsStore((s) => s.order);
-  const scoringFormat = useRankingsStore((s) => s.scoringFormat);
+  const order = useActiveOrder();
+  const scoringFormat = useDisplayScoringFormat();
   const [query, setQuery] = useState("");
 
   const playerById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
