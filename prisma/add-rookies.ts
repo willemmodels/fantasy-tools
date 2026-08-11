@@ -25,6 +25,14 @@ const adapter = new PrismaBetterSqlite3({
 });
 const prisma = new PrismaClient({ adapter });
 
+// Unlike veterans, a real drafted rookie this early in preseason can still be
+// "RES" (reserve) rather than "ACT" — e.g. the 2026 #1 overall pick QB was RES,
+// not ACT, at time of writing — so ACT-only excluded some of the most notable
+// names in the class while letting lower-relevance ACT-status depth players
+// through. RET (retired) and other statuses are still excluded as not
+// season-relevant.
+const ROOKIE_STATUSES = ["ACT", "RES"];
+
 async function main() {
   console.log("Fetching 2026 rosters, 2025 stats, 2026 schedule, and contracts from nflverse…");
 
@@ -40,7 +48,7 @@ async function main() {
 
   const rookies = roster.filter(
     (r) =>
-      r.status === "ACT" &&
+      ROOKIE_STATUSES.includes(r.status) &&
       FANTASY_POSITIONS.includes(r.position as Position) &&
       r.years_exp === "0"
   );
