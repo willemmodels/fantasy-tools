@@ -40,7 +40,6 @@ const DEFAULT_ROSTER: RosterConfig = {
 };
 
 export function RoomConfigModal() {
-  const config = useDraftStore((s) => s.config);
   const configure = useDraftStore((s) => s.configure);
 
   const [scoring, setScoring] = useState<ScoringFormat>("PPR");
@@ -69,8 +68,13 @@ export function RoomConfigModal() {
     );
   }
 
+  // No `open`/`onOpenChange` here on purpose: the parent (DraftPage) only mounts
+  // this component while `config` is null, so mounting IS the show/hide — the
+  // modal disappears the instant `config` is set, in the same render, with no
+  // dependency on Base UI's exit-animation lifecycle (which can leave the popup
+  // stuck on screen if its animationend event never fires in a given browser).
   return (
-    <Dialog open={!config}>
+    <Dialog open>
       <DialogContent className="sm:max-w-lg" showCloseButton={false}>
         <DialogHeader>
           <DialogTitle>Set up your draft room</DialogTitle>

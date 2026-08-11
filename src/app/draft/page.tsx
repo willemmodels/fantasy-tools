@@ -18,7 +18,7 @@ export default function DraftPage() {
 
   return (
     <div className="flex h-[calc(100vh-56px)]">
-      <RoomConfigModal />
+      {!config && <RoomConfigModal />}
       <div className="flex-1 overflow-auto p-6">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-xl font-medium">Draft Board</h1>
