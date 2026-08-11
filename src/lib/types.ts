@@ -73,10 +73,10 @@ export const BIG_BALLER_STARTUP_ROSTER: RosterConfig = {
   TE: 2,
   FLEX: 2,
   K: 2,
-  BENCH: 20,
+  BENCH: 25,
 };
 
-export const BIG_BALLER_BUDGET = 500;
+export const BIG_BALLER_BUDGET = 600;
 export const BIG_BALLER_TEAMS = 4;
 
 export interface DraftPick {

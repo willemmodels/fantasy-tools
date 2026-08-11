@@ -1,61 +1,41 @@
 import { Player, Position, RosterConfig } from "./types";
 
-// FLEX slots are split across the three skill positions by typical
-// fantasy usage rates rather than evenly, since RBs/WRs fill FLEX far more often than TEs.
-const FLEX_SHARE: Record<"RB" | "WR" | "TE", number> = {
-  RB: 0.45,
-  WR: 0.45,
-  TE: 0.1,
-};
-
-export function replacementRank(
-  position: Position,
-  roster: RosterConfig,
-  teams: number
-): number {
-  const base = roster[position] ?? 0;
-  const flexAdd =
-    position === "RB" || position === "WR" || position === "TE"
-      ? roster.FLEX * FLEX_SHARE[position]
-      : 0;
-  return Math.max(1, Math.round(teams * (base + flexAdd)));
-}
-
 type ValueOf = (player: Player) => number;
 
 const defaultValueOf: ValueOf = (p) => p.proj2026;
 
-export function computeReplacementLevels(
+// One overall replacement level shared by every position — deliberately not
+// one per position. Splitting replacement level by position let a player at a
+// "scarce" position (e.g. QB, with few starting slots) outprice a player the
+// user ranked higher overall at a "deeper" position, even though `valueOf`
+// already made the higher-ranked player's raw value bigger: subtracting a
+// taller position-specific baseline could still flip the two players' VORP
+// (and therefore dollar value) relative to each other. A single global
+// baseline can't do that — whatever `valueOf` says is strictly preserved
+// (see computeAuctionValues below for why that makes the result monotonic
+// in rank). Tiers don't need separate handling here: a tier is already just
+// a contiguous run within the rankings order (see use-rankings-store.ts), so
+// respecting `order` strictly already respects tier boundaries too.
+export function computeReplacementLevel(
   players: Player[],
   roster: RosterConfig,
   teams: number,
   valueOf: ValueOf = defaultValueOf
-): Record<Position, number> {
-  const levels: Partial<Record<Position, number>> = {};
-  const byPosition: Record<Position, Player[]> = {
-    QB: [],
-    RB: [],
-    WR: [],
-    TE: [],
-    K: [],
-  };
-  for (const p of players) byPosition[p.position].push(p);
-
-  for (const pos of Object.keys(byPosition) as Position[]) {
-    const sorted = [...byPosition[pos]].sort((a, b) => valueOf(b) - valueOf(a));
-    const rank = replacementRank(pos, roster, teams);
-    const replacementPlayer = sorted[Math.min(rank, sorted.length) - 1];
-    levels[pos] = replacementPlayer ? valueOf(replacementPlayer) : 0;
-  }
-  return levels as Record<Position, number>;
+): number {
+  const startersPerTeam = roster.QB + roster.RB + roster.WR + roster.TE + roster.FLEX;
+  const replacementRankOverall = Math.max(1, Math.round(teams * startersPerTeam));
+  const skillPlayers = players.filter((p) => p.position !== "K");
+  const sorted = [...skillPlayers].sort((a, b) => valueOf(b) - valueOf(a));
+  const replacementPlayer = sorted[Math.min(replacementRankOverall, sorted.length) - 1];
+  return replacementPlayer ? valueOf(replacementPlayer) : 0;
 }
 
 export function vorp(
   player: Player,
-  replacementLevels: Record<Position, number>,
+  replacementLevel: number,
   valueOf: ValueOf = defaultValueOf
 ): number {
-  return valueOf(player) - replacementLevels[player.position];
+  return valueOf(player) - replacementLevel;
 }
 
 // Reassigns each available player's VORP-relevant "value" according to the
@@ -114,11 +94,11 @@ export function computeAuctionValues(
   const rankValues = order ? reorderValuesByRank(availablePlayers, order) : null;
   const valueOf: ValueOf = rankValues ? (p) => rankValues.get(p.id) ?? p.proj2026 : defaultValueOf;
 
-  const replacementLevels = computeReplacementLevels(availablePlayers, roster, teams, valueOf);
+  const replacementLevel = computeReplacementLevel(availablePlayers, roster, teams, valueOf);
 
   const skillPlayers = availablePlayers.filter((p) => p.position !== "K");
   const positiveVorps = skillPlayers
-    .map((p) => Math.max(0, vorp(p, replacementLevels, valueOf)))
+    .map((p) => Math.max(0, vorp(p, replacementLevel, valueOf)))
     .reduce((sum, v) => sum + v, 0);
 
   for (const player of availablePlayers) {
@@ -126,7 +106,7 @@ export function computeAuctionValues(
       values.set(player.id, KICKER_FLAT_PRICE);
       continue;
     }
-    const playerVorp = Math.max(0, vorp(player, replacementLevels, valueOf));
+    const playerVorp = Math.max(0, vorp(player, replacementLevel, valueOf));
     const share = positiveVorps > 0 ? playerVorp / positiveVorps : 0;
     const dollarValue = 1 + share * distributable;
     values.set(player.id, Math.round(dollarValue));
